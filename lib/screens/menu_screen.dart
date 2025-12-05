@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'detail_menu_screen.dart';
+import '../utils/theme.dart';
 
 class MenuScreen extends StatefulWidget {
   const MenuScreen({super.key});
@@ -17,13 +19,23 @@ class _MenuScreenState extends State<MenuScreen> {
       'name': 'Pizza',
       'image': 'assets/images/pizza.jpg',
       'desc': 'Pizza lezat dengan keju melimpah dan topping premium.',
-      'nutrition': {'kalori': 285, 'protein': 12, 'lemak': 10, 'karbohidrat': 36},
+      'nutrition': {
+        'kalori': 285,
+        'protein': 12,
+        'lemak': 10,
+        'karbohidrat': 36,
+      },
     },
     {
       'name': 'Burger',
       'image': 'assets/images/burger.jpg',
       'desc': 'Burger daging sapi juicy dengan saus spesial rumah.',
-      'nutrition': {'kalori': 354, 'protein': 17, 'lemak': 20, 'karbohidrat': 29},
+      'nutrition': {
+        'kalori': 354,
+        'protein': 17,
+        'lemak': 20,
+        'karbohidrat': 29,
+      },
     },
     {
       'name': 'Nasi Goreng',
@@ -41,7 +53,12 @@ class _MenuScreenState extends State<MenuScreen> {
       'name': 'Ayam Bakar',
       'image': 'assets/images/ayam_bakar.jpeg',
       'desc': 'Ayam bakar bumbu madu dengan sambal pedas.',
-      'nutrition': {'kalori': 300, 'protein': 25, 'lemak': 10, 'karbohidrat': 15},
+      'nutrition': {
+        'kalori': 300,
+        'protein': 25,
+        'lemak': 10,
+        'karbohidrat': 15,
+      },
     },
     {
       'name': 'Sate Ayam',
@@ -53,7 +70,12 @@ class _MenuScreenState extends State<MenuScreen> {
       'name': 'Pasta',
       'image': 'assets/images/pasta.jpg',
       'desc': 'Pasta lembut dengan saus tomat dan keju mozzarella.',
-      'nutrition': {'kalori': 310, 'protein': 11, 'lemak': 6, 'karbohidrat': 50},
+      'nutrition': {
+        'kalori': 310,
+        'protein': 11,
+        'lemak': 6,
+        'karbohidrat': 50,
+      },
     },
   ];
 
@@ -87,7 +109,12 @@ class _MenuScreenState extends State<MenuScreen> {
       'name': 'Jus Alpukat',
       'image': 'assets/images/jus_alpukat.jpeg',
       'desc': 'Jus alpukat segar dengan cokelat leleh di atasnya.',
-      'nutrition': {'kalori': 180, 'protein': 3, 'lemak': 12, 'karbohidrat': 15},
+      'nutrition': {
+        'kalori': 180,
+        'protein': 3,
+        'lemak': 12,
+        'karbohidrat': 15,
+      },
     },
     {
       'name': 'Matcha Latte',
@@ -103,7 +130,9 @@ class _MenuScreenState extends State<MenuScreen> {
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$nama ditambahkan! (+${kalori.toStringAsFixed(0)} kcal)'),
+        content: Text(
+          '$nama ditambahkan! (+${kalori.toStringAsFixed(0)} kcal)',
+        ),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
       ),
@@ -115,16 +144,36 @@ class _MenuScreenState extends State<MenuScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        backgroundColor: AppTheme.lightBg,
         appBar: AppBar(
-          title: const Text('Menu & Kalori'),
-          backgroundColor: Colors.redAccent,
+          title: Text(
+            'Menu & Kalori',
+            style: GoogleFonts.poppins(
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: AppTheme.primaryColor,
           centerTitle: true,
-          bottom: const TabBar(
+          bottom: TabBar(
             labelColor: Colors.white,
-            indicatorColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: AppTheme.accentColor,
+            indicatorWeight: 3,
             tabs: [
-              Tab(text: 'Makanan'),
-              Tab(text: 'Minuman'),
+              Tab(
+                child: Text(
+                  'Makanan',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
+              Tab(
+                child: Text(
+                  'Minuman',
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+                ),
+              ),
             ],
           ),
         ),
@@ -132,15 +181,55 @@ class _MenuScreenState extends State<MenuScreen> {
           children: [
             Container(
               width: double.infinity,
-              color: Colors.redAccent.withOpacity(0.1),
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Total Kalori Hari Ini: ${totalKalori.toStringAsFixed(0)} kcal',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.redAccent,
-                ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(8),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentColor.withAlpha(26),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.local_fire_department,
+                      color: AppTheme.accentColor,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Kalori Hari Ini',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textLight,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${totalKalori.toStringAsFixed(0)} kcal',
+                        style: GoogleFonts.poppins(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -159,7 +248,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Widget _buildMenuList(List<Map<String, dynamic>> items) {
     return ListView.builder(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(16),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
@@ -173,20 +262,28 @@ class _MenuScreenState extends State<MenuScreen> {
                   image: item['image'],
                   desc: item['desc'],
                   nutrition: item['nutrition'],
-                  onAdd: () => tambahKalori(item['nutrition']['kalori'].toDouble(), item['name']),
+                  onAdd: () => tambahKalori(
+                    item['nutrition']['kalori'].toDouble(),
+                    item['name'],
+                  ),
                 ),
               ),
             );
           },
           child: Card(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             margin: const EdgeInsets.symmetric(vertical: 8),
-            elevation: 3,
+            elevation: 2,
+            shadowColor: Colors.black.withAlpha(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
                   child: Image.asset(
                     item['image'],
                     height: 180,
@@ -202,23 +299,73 @@ class _MenuScreenState extends State<MenuScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item['name'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Text(item['desc'], style: const TextStyle(color: Colors.black54)),
-                      const SizedBox(height: 8),
-                      Text("Kalori: ${item['nutrition']['kalori']} kcal"),
-                      const SizedBox(height: 8),
-                      ElevatedButton(
-                        onPressed: () => tambahKalori(item['nutrition']['kalori'].toDouble(), item['name']),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      Text(
+                        item['name'],
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textDark,
                         ),
-                        child: const Text('Tambah ke Daftar Hari Ini'),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item['desc'],
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: AppTheme.textLight,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.accentColor.withAlpha(26),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              "${item['nutrition']['kalori']} kcal",
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.accentColor,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () => tambahKalori(
+                            item['nutrition']['kalori'].toDouble(),
+                            item['name'],
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentColor,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Tambah ke Daftar',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),

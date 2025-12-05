@@ -1,5 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'edit_profile_screen.dart';
+import 'login_screen.dart';
+import '../utils/theme.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -13,123 +18,249 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String email = 'nailacahya580@gmail.com';
   String phone = '08988213616';
   String address = 'Bandar Lampung';
+  String? profileImageBase64;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentEmail = prefs.getString('current_user_email');
+    final usersJson = prefs.getString('users');
+    if (usersJson != null && currentEmail != null) {
+      try {
+        final users = jsonDecode(usersJson) as List;
+        final user = users.firstWhere(
+          (u) => u['email'] == currentEmail,
+          orElse: () => null,
+        );
+        if (user != null) {
+          setState(() {
+            name = user['name'] ?? name;
+            email = user['email'] ?? email;
+            phone = user['phone'] ?? phone;
+            address = user['address'] ?? address;
+            profileImageBase64 = user['profileImage'];
+          });
+          return;
+        }
+      } catch (_) {}
+    }
+
+    // fallback to defaults
+    setState(() {
+      name = prefs.getString('user_name') ?? name;
+      email = prefs.getString('user_email') ?? email;
+      phone = prefs.getString('user_phone') ?? phone;
+      address = prefs.getString('user_address') ?? address;
+    });
+  }
+
+  Future<void> _handleLogout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('current_user_email');
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.red.shade50,
+      backgroundColor: AppTheme.lightBg,
       appBar: AppBar(
-        title: const Text('Profil Saya'),
-        backgroundColor: Colors.redAccent,
+        title: Text(
+          'Profil Saya',
+          style: GoogleFonts.poppins(
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: AppTheme.primaryColor,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         child: Column(
           children: [
-            // 🔹 Card profil besar di atas
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: Colors.redAccent,
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryColor,
+                    AppTheme.primaryColor.withAlpha(204),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 45,
-                    backgroundImage: const AssetImage('assets/images/user.png'),
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                  Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                    child: CircleAvatar(
+                      radius: 50,
+                      backgroundColor: AppTheme.primaryColor.withAlpha(51),
+                      backgroundImage: profileImageBase64 != null
+                          ? MemoryImage(base64Decode(profileImageBase64!))
+                          : null,
+                      child: profileImageBase64 == null
+                          ? Icon(Icons.person, size: 50, color: Colors.white)
+                          : null,
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Text(
                     name,
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     email,
-                    style: const TextStyle(color: Colors.white70),
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.white70,
+                    ),
                   ),
                 ],
               ),
             ),
-
-            const SizedBox(height: 25),
-
-            // 🔹 Card info pengguna
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+            const SizedBox(height: 32),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(8),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              elevation: 3,
               child: Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _buildInfoRow(Icons.phone, 'Nomor Telepon', phone),
-                    const Divider(),
-                    _buildInfoRow(Icons.location_on, 'Alamat', address),
+                    _buildProfileInfoRow(Icons.phone, 'Nomor Telepon', phone),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: Colors.grey.shade200),
+                    ),
+                    _buildProfileInfoRow(Icons.location_on, 'Alamat', address),
                   ],
                 ),
               ),
             ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => EditProfileScreen(
+                      name: name,
+                      email: email,
+                      phone: phone,
+                      address: address,
+                    ),
+                  ),
+                );
 
-            const SizedBox(height: 25),
-
-            // 🔹 Tombol edit dan logout
-            Column(
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    final result = await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfileScreen(),
-                      ),
-                    );
-
-                    if (result != null && result is Map<String, dynamic>) {
-                      setState(() {
-                        name = result['name'] ?? name;
-                        email = result['email'] ?? email;
-                        phone = result['phone'] ?? phone;
-                        address = result['address'] ?? address;
-                      });
+                if (result != null && result is Map<String, dynamic>) {
+                  final prefs = await SharedPreferences.getInstance();
+                  final usersJson = prefs.getString('users');
+                  List users = [];
+                  if (usersJson != null) {
+                    try {
+                      users = jsonDecode(usersJson);
+                    } catch (_) {
+                      users = [];
                     }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 14, horizontal: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.edit, color: Colors.white),
-                  label: const Text(
-                    'Edit Profil',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  }
+
+                  final idx = users.indexWhere((u) => u['email'] == email);
+                  if (idx != -1) {
+                    users[idx] = {
+                      'name': result['name'] ?? users[idx]['name'],
+                      'email': result['email'] ?? users[idx]['email'],
+                      'phone': result['phone'] ?? users[idx]['phone'],
+                      'address': result['address'] ?? users[idx]['address'],
+                      'role': users[idx]['role'] ?? 'user',
+                      'password': users[idx]['password'] ?? '',
+                      'profileImage':
+                          result['profileImage'] ?? users[idx]['profileImage'],
+                    };
+                    await prefs.setString('users', jsonEncode(users));
+                    if ((result['email'] ?? email) != email) {
+                      await prefs.setString(
+                        'current_user_email',
+                        result['email'],
+                      );
+                    }
+                  }
+
+                  setState(() {
+                    name = result['name'] ?? name;
+                    email = result['email'] ?? email;
+                    phone = result['phone'] ?? phone;
+                    address = result['address'] ?? address;
+                    profileImageBase64 = result['profileImage'];
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.accentColor,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 24,
                 ),
-                const SizedBox(height: 15),
-                TextButton.icon(
-                  onPressed: () {},
-                  icon: const Icon(Icons.logout, color: Colors.grey),
-                  label: const Text(
-                    'Keluar',
-                    style: TextStyle(color: Colors.grey, fontSize: 15),
-                  ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+              ),
+              icon: const Icon(Icons.edit, color: Colors.white),
+              label: Text(
+                'Edit Profil',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: _handleLogout,
+              icon: Icon(Icons.logout, color: AppTheme.textLight),
+              label: Text(
+                'Keluar',
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textLight,
+                ),
+              ),
             ),
           ],
         ),
@@ -137,11 +268,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String title, String value) {
-    return ListTile(
-      leading: Icon(icon, color: Colors.redAccent),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text(value),
+  Widget _buildProfileInfoRow(IconData icon, String title, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryColor.withAlpha(26),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: AppTheme.primaryColor, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.textLight,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
