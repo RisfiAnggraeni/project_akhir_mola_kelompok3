@@ -10,6 +10,10 @@ class EditProfileScreen extends StatefulWidget {
   final String email;
   final String phone;
   final String address;
+  final int? age;
+  final double? weight;
+  final double? height;
+  final double? calorieTarget;
 
   const EditProfileScreen({
     super.key,
@@ -17,6 +21,10 @@ class EditProfileScreen extends StatefulWidget {
     required this.email,
     required this.phone,
     required this.address,
+    this.age,
+    this.weight,
+    this.height,
+    this.calorieTarget,
   });
 
   @override
@@ -31,6 +39,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   late String email;
   late String phone;
   late String address;
+  late int age;
+  late double weight;
+  late double height;
+  late double calorieTarget;
   String password = '';
   File? _profileImage;
 
@@ -41,6 +53,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     email = widget.email;
     phone = widget.phone;
     address = widget.address;
+    age = widget.age ?? 0;
+    weight = widget.weight ?? 0;
+    height = widget.height ?? 0;
+    calorieTarget = widget.calorieTarget ?? 2000;
   }
 
   Future<void> _pickImage() async {
@@ -189,6 +205,58 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     value!.isEmpty ? 'Alamat tidak boleh kosong' : null,
               ),
               const SizedBox(height: 20),
+              _buildFieldLabel('Umur (tahun)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                initialValue: age > 0 ? age.toString() : '',
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan umur',
+                  prefixIcon: const Icon(Icons.cake_outlined),
+                  prefixIconColor: AppTheme.textLight,
+                ),
+                onChanged: (value) => age = int.tryParse(value) ?? 0,
+              ),
+              const SizedBox(height: 20),
+              _buildFieldLabel('Berat Badan (kg)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                initialValue: weight > 0 ? weight.toStringAsFixed(1) : '',
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan berat badan',
+                  prefixIcon: const Icon(Icons.monitor_weight_outlined),
+                  prefixIconColor: AppTheme.textLight,
+                ),
+                onChanged: (value) => weight = double.tryParse(value) ?? 0,
+              ),
+              const SizedBox(height: 20),
+              _buildFieldLabel('Tinggi Badan (cm)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                initialValue: height > 0 ? height.toStringAsFixed(0) : '',
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan tinggi badan',
+                  prefixIcon: const Icon(Icons.height),
+                  prefixIconColor: AppTheme.textLight,
+                ),
+                onChanged: (value) => height = double.tryParse(value) ?? 0,
+              ),
+              const SizedBox(height: 20),
+              _buildFieldLabel('Target Kalori Harian (kcal)'),
+              const SizedBox(height: 8),
+              TextFormField(
+                initialValue: calorieTarget > 0 ? calorieTarget.toStringAsFixed(0) : '',
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  hintText: 'Masukkan target kalori',
+                  prefixIcon: const Icon(Icons.local_fire_department),
+                  prefixIconColor: AppTheme.textLight,
+                ),
+                onChanged: (value) => calorieTarget = double.tryParse(value) ?? 2000,
+              ),
+              const SizedBox(height: 20),
               _buildFieldLabel('Password'),
               const SizedBox(height: 8),
               TextFormField(
@@ -225,6 +293,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       'phone': phone,
                       'address': address,
                       'profileImage': profileImageBase64,
+                      'age': age,
+                      'weight': weight,
+                      'height': height,
+                      'calorieTarget': calorieTarget,
                     });
 
                     ScaffoldMessenger.of(context).showSnackBar(

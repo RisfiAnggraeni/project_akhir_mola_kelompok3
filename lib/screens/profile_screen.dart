@@ -18,6 +18,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String email = 'nailacahya580@gmail.com';
   String phone = '08988213616';
   String address = 'Bandar Lampung';
+  int age = 0;
+  double weight = 0;
+  double height = 0;
+  double calorieTarget = 2000;
   String? profileImageBase64;
 
   @override
@@ -43,6 +47,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             email = user['email'] ?? email;
             phone = user['phone'] ?? phone;
             address = user['address'] ?? address;
+            age = user['age'] ?? 0;
+            weight = (user['weight'] is int) ? (user['weight'] as int).toDouble() : (user['weight'] ?? 0);
+            height = (user['height'] is int) ? (user['height'] as int).toDouble() : (user['height'] ?? 0);
+            calorieTarget = (user['calorieTarget'] is int) ? (user['calorieTarget'] as int).toDouble() : (user['calorieTarget'] ?? 2000);
             profileImageBase64 = user['profileImage'];
           });
           return;
@@ -162,12 +170,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    _buildProfileInfoRow(Icons.phone, 'Nomor Telepon', phone),
+                    _buildProfileInfoRow(Icons.person, 'Nama', name),
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Divider(height: 1, color: Colors.grey.shade200),
                     ),
-                    _buildProfileInfoRow(Icons.location_on, 'Alamat', address),
+                    _buildProfileInfoRow(Icons.email, 'Email', email),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: Colors.grey.shade200),
+                    ),
+                    _buildProfileInfoRow(Icons.cake_outlined, 'Umur', age > 0 ? '$age tahun' : '-'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: Colors.grey.shade200),
+                    ),
+                    _buildProfileInfoRow(Icons.monitor_weight_outlined, 'Berat Badan', weight > 0 ? '${weight.toStringAsFixed(1)} kg' : '-'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: Colors.grey.shade200),
+                    ),
+                    _buildProfileInfoRow(Icons.height, 'Tinggi Badan', height > 0 ? '${height.toStringAsFixed(0)} cm' : '-'),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1, color: Colors.grey.shade200),
+                    ),
+                    _buildProfileInfoRow(Icons.local_fire_department, 'Target Kalori', '${calorieTarget.toStringAsFixed(0)} kcal'),
                   ],
                 ),
               ),
@@ -183,6 +211,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       email: email,
                       phone: phone,
                       address: address,
+                      age: age,
+                      weight: weight,
+                      height: height,
+                      calorieTarget: calorieTarget,
                     ),
                   ),
                 );
@@ -210,6 +242,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'password': users[idx]['password'] ?? '',
                       'profileImage':
                           result['profileImage'] ?? users[idx]['profileImage'],
+                      'age': result['age'] ?? users[idx]['age'] ?? 0,
+                      'weight': result['weight'] ?? users[idx]['weight'] ?? 0,
+                      'height': result['height'] ?? users[idx]['height'] ?? 0,
+                      'calorieTarget': result['calorieTarget'] ?? users[idx]['calorieTarget'] ?? 2000,
                     };
                     await prefs.setString('users', jsonEncode(users));
                     if ((result['email'] ?? email) != email) {
@@ -225,6 +261,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     email = result['email'] ?? email;
                     phone = result['phone'] ?? phone;
                     address = result['address'] ?? address;
+                    age = result['age'] ?? age;
+                    weight = result['weight'] ?? weight;
+                    height = result['height'] ?? height;
+                    calorieTarget = result['calorieTarget'] ?? calorieTarget;
                     profileImageBase64 = result['profileImage'];
                   });
                 }

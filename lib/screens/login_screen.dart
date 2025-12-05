@@ -20,6 +20,46 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   String _selectedRole = 'user';
   bool _obscurePassword = true;
+  bool _rememberMe = false;
+
+  // Admin credentials yang sudah tersimpan
+  static const List<Map<String, String>> _defaultAdmins = [
+    {'email': 'admin1@email.com', 'password': 'admin123', 'name': 'Admin 1'},
+    {'email': 'nailacahya580@gmail.com', 'password': '123456', 'name': 'cahya nayla'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeAdmins();
+    _loadSavedLogin();
+  }
+
+  Future<void> _initializeAdmins() async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    // Cek apakah admin sudah tersimpan
+    final adminsJson = prefs.getString('admins');
+    if (adminsJson == null) {
+      // Simpan admin default jika belum ada
+      await prefs.setString('admins', jsonEncode(_defaultAdmins));
+    }
+  }
+
+  Future<void> _loadSavedLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString('saved_admin_email');
+    final savedPassword = prefs.getString('saved_admin_password');
+    
+    if (savedEmail != null && savedPassword != null) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _passwordController.text = savedPassword;
+        _rememberMe = true;
+        _selectedRole = 'admin';
+      });
+    }
+  }
 
   Future<void> _handleLogin() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
@@ -31,52 +71,124 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final prefs = await SharedPreferences.getInstance();
 
-    final usersJson = prefs.getString('users');
-    List users = [];
-    if (usersJson != null) {
-      try {
-        users = jsonDecode(usersJson);
-      } catch (_) {
-        users = [];
+    if (_selectedRole == 'admin') {
+      // Check admin credentials
+      final adminsJson = prefs.getString('admins');
+      List admins = [];
+      if (adminsJson != null) {
+        try {
+          admins = jsonDecode(adminsJson);
+        } catch (_) {
+          admins = _defaultAdmins;
+        }
+      } else {
+        admins = _defaultAdmins;
       }
-    }
 
-    final matched = users.firstWhere(
-      (u) =>
-          u['email'] == _emailController.text &&
-          u['password'] == _passwordController.text,
-      orElse: () => null,
-    );
+      final matchedAdmin = admins.firstWhere(
+        (a) =>
+            a['email'] == _emailController.text &&
+            a['password'] == _passwordController.text,
+        orElse: () => null,
+      );
 
-    if (matched == null) {
+      if (matchedAdmin == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Email atau password admin salah!')),
+          );
+        }
+        return;
+      }
+
+      // Simpan login jika remember me diaktifkan
+      if (_rememberMe) {
+        await prefs.setString('saved_admin_email', _emailController.text);
+        await prefs.setString('saved_admin_password', _passwordController.text);
+      } else {
+        await prefs.remove('saved_admin_email');
+        await prefs.remove('saved_admin_password');
+      }
+
+      // Set session current user
+      await prefs.setString('current_user_email', _emailController.text);
+      await prefs.setString('current_user_role', 'admin');
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email atau password salah!')),
-        );
-      }
-      return;
-    }
-
-    final savedRole = (matched['role'] ?? 'user') as String;
-    if (_selectedRole != savedRole) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Role mismatch: account is "$savedRole"')),
-        );
-      }
-      return;
-    }
-
-    // Set session current user
-    await prefs.setString('current_user_email', _emailController.text);
-
-    if (mounted) {
-      if (savedRole == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AdminDashboard()),
         );
-      } else {
+      }
+    } else {
+      // Check user credentials
+      final usersJson = prefs.getString('users');
+      List users = [];
+      if (usersJson != null) {
+        try {
+          users = jsonDecode(usersJson);
+        } catch (_) {
+          users = [];
+        }
+      }
+
+      final matched = users.firstWhere(
+        (u) =>
+            u['email'] == _emailController.text &&
+            u['password'] == _passwordController.text,
+        orElse: () => null,
+      );
+      if (matched == null) {
+        // Check if email exists at all
+        final exists = users.any((u) => u['email'] == _emailController.text);
+        if (!exists) {
+          // Offer to register with this email
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: Text('Akun tidak ditemukan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                content: Text('Email belum terdaftar. Ingin mendaftar sekarang?', style: GoogleFonts.inter()),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text('Batal', style: GoogleFonts.inter()),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RegisterScreen(
+                            initialEmail: _emailController.text,
+                            initialPassword: _passwordController.text,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text('Daftar', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  ),
+                ],
+              ),
+            );
+          }
+          return;
+        }
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Email atau password salah!')),
+          );
+        }
+        return;
+      }
+
+      // Set session current user
+      await prefs.setString('current_user_email', _emailController.text);
+      await prefs.setString('current_user_role', 'user');
+
+      if (mounted) {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),
@@ -247,6 +359,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 onChanged: (v) => setState(() => _selectedRole = v ?? 'user'),
               ),
             ),
+
+            const SizedBox(height: 16),
+
+            // Remember Me Checkbox (hanya untuk admin)
+            if (_selectedRole == 'admin')
+              Row(
+                children: [
+                  Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) {
+                      setState(() => _rememberMe = value ?? false);
+                    },
+                    activeColor: AppTheme.primaryColor,
+                  ),
+                  Text(
+                    'Ingat saya',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                ],
+              ),
 
             const SizedBox(height: 32),
 

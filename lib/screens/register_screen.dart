@@ -4,10 +4,18 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'login_screen.dart';
+import 'main_navigation.dart';
 import '../utils/theme.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
+  final String? initialEmail;
+  final String? initialPassword;
+
+  const RegisterScreen({
+    super.key,
+    this.initialEmail,
+    this.initialPassword,
+  });
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -25,6 +33,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
+    // Prefill with initial values if provided
+    if (widget.initialEmail != null) {
+      _emailController.text = widget.initialEmail!;
+    }
+    if (widget.initialPassword != null) {
+      _passwordController.text = widget.initialPassword!;
+    }
     SharedPreferences.getInstance().then((prefs) {
       final usersJson = prefs.getString('users');
       bool hasAdmin = false;
@@ -80,20 +95,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
     users.add(newUser);
     await prefs.setString('users', jsonEncode(users));
     await prefs.setString('current_user_email', _emailController.text);
+    await prefs.setString('current_user_role', _selectedRole);
 
     if (mounted) {
-      print(
-        'Saved user -> name: ${_nameController.text}, email: ${_emailController.text}, phone: ${_phoneController.text}, address: ${_addressController.text}, role: $_selectedRole',
-      );
-
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat!')));
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
+      // After registration, navigate directly into the app for users
+      if (_selectedRole == 'user') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainNavigation()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
     }
   }
 

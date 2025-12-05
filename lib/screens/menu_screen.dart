@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'calorie_history_screen.dart';
 import 'detail_menu_screen.dart';
 import '../utils/theme.dart';
 
@@ -12,6 +15,66 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   double totalKalori = 0;
+  double dailyTarget = 2000; // default target kalori per hari
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDailyTarget();
+  }
+
+  Future<void> _loadDailyTarget() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getDouble('daily_target');
+      if (saved != null) {
+        setState(() {
+          dailyTarget = saved;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveDailyTarget(double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('daily_target', value);
+    setState(() {
+      dailyTarget = value;
+    });
+  }
+
+  void _showEditTargetDialog() {
+    final controller = TextEditingController(text: dailyTarget.toStringAsFixed(0));
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Ubah Target Kalori', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'Target kalori (kcal)'
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Batal', style: GoogleFonts.inter()),
+          ),
+          TextButton(
+            onPressed: () {
+              final val = double.tryParse(controller.text.replaceAll(',', '.'));
+              if (val != null && val > 0) {
+                _saveDailyTarget(val);
+              }
+              Navigator.pop(context);
+            },
+            child: Text('Simpan', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
 
   // 🔹 Semua Makanan
   final List<Map<String, dynamic>> foodItems = [
@@ -128,6 +191,7 @@ class _MenuScreenState extends State<MenuScreen> {
     setState(() {
       totalKalori += kalori;
     });
+    _saveConsumption(nama, kalori);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -137,6 +201,54 @@ class _MenuScreenState extends State<MenuScreen> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  Future<void> _saveConsumption(String name, double calories) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final histJson = prefs.getString('consumption_history');
+      List history = [];
+      if (histJson != null) {
+        try {
+          history = jsonDecode(histJson);
+        } catch (_) {
+          history = [];
+        }
+      }
+
+      final now = DateTime.now();
+      final entry = {
+        'date': now.toIso8601String(),
+        'name': name,
+        'calories': calories,
+      };
+      history.add(entry);
+      await prefs.setString('consumption_history', jsonEncode(history));
+
+      // recompute today's total
+      _loadTodaysTotalFromHistory();
+    } catch (_) {}
+  }
+
+  Future<void> _loadTodaysTotalFromHistory() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final histJson = prefs.getString('consumption_history');
+      double sum = 0;
+      if (histJson != null) {
+        final history = jsonDecode(histJson) as List;
+        final today = DateTime.now();
+        for (final e in history) {
+          try {
+            final dt = DateTime.parse(e['date']);
+            if (dt.year == today.year && dt.month == today.month && dt.day == today.day) {
+              sum += (e['calories'] is int) ? (e['calories'] as int).toDouble() : (e['calories'] as num).toDouble();
+            }
+          } catch (_) {}
+        }
+      }
+      if (mounted) setState(() => totalKalori = sum);
+    } catch (_) {}
   }
 
   @override
@@ -156,6 +268,17 @@ class _MenuScreenState extends State<MenuScreen> {
           ),
           backgroundColor: AppTheme.primaryColor,
           centerTitle: true,
+          actions: [
+            IconButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (c) => const CalorieHistoryScreen()),
+                );
+              },
+              icon: const Icon(Icons.history),
+            ),
+          ],
           bottom: TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
@@ -192,43 +315,122 @@ class _MenuScreenState extends State<MenuScreen> {
                 ],
               ),
               padding: const EdgeInsets.all(20),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentColor.withAlpha(26),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.local_fire_department,
-                      color: AppTheme.accentColor,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        'Total Kalori Hari Ini',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.textLight,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentColor.withAlpha(26),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.local_fire_department,
+                          color: AppTheme.accentColor,
+                          size: 24,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${totalKalori.toStringAsFixed(0)} kcal',
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.accentColor,
-                        ),
+                      const SizedBox(width: 16),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total Kalori Hari Ini',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppTheme.textLight,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${totalKalori.toStringAsFixed(0)} kcal',
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.accentColor,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  // Progress bar
+                  Builder(builder: (context) {
+                    final percent = (dailyTarget <= 0)
+                        ? 0.0
+                        : (totalKalori / dailyTarget).clamp(0, 1).toDouble();
+                    final remaining = (dailyTarget - totalKalori).clamp(0, double.infinity);
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Target: ${dailyTarget.toStringAsFixed(0)} kcal',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    color: AppTheme.textLight,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: Icon(Icons.edit, size: 18, color: AppTheme.textLight),
+                                  onPressed: _showEditTargetDialog,
+                                ),
+                              ],
+                            ),
+                            Text(
+                              '${(percent * 100).toStringAsFixed(0)}%',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            minHeight: 12,
+                            value: percent,
+                            backgroundColor: Colors.grey.shade200,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Terkumpul: ${totalKalori.toStringAsFixed(0)} kcal',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textLight,
+                              ),
+                            ),
+                            Text(
+                              'Sisa: ${remaining.toStringAsFixed(0)} kcal',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: AppTheme.textLight,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  }),
                 ],
               ),
             ),

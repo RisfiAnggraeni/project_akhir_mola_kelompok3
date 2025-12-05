@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 import '../utils/theme.dart';
 
 class AdminManageMenuScreen extends StatefulWidget {
@@ -13,18 +15,30 @@ class _AdminManageMenuScreenState extends State<AdminManageMenuScreen> {
   final List<Map<String, dynamic>> menuItems = [
     {
       'name': 'Nasi Goreng',
-      'price': 25000,
       'description': 'Nasi goreng spesial dengan telur dan sayuran',
+      'calories': 450,
+      'protein': 12,
+      'carbs': 58,
+      'fat': 18,
+      'image': null,
     },
     {
       'name': 'Mie Goreng',
-      'price': 20000,
       'description': 'Mie goreng lezat dengan bumbu pilihan',
+      'calories': 420,
+      'protein': 10,
+      'carbs': 55,
+      'fat': 16,
+      'image': null,
     },
     {
       'name': 'Soto Ayam',
-      'price': 18000,
       'description': 'Soto ayam tradisional yang hangat',
+      'calories': 280,
+      'protein': 18,
+      'carbs': 22,
+      'fat': 10,
+      'image': null,
     },
   ];
 
@@ -116,59 +130,99 @@ class _AdminManageMenuScreenState extends State<AdminManageMenuScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryColor.withAlpha(26),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.restaurant_menu,
+                  // Foto Menu
+                  Container(
+                    width: double.infinity,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: item['image'] != null
+                        ? ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              File(item['image']),
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        : Icon(
+                            Icons.restaurant_menu,
+                            size: 60,
+                            color: Colors.grey[400],
+                          ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Nama Menu
+                  Text(
+                    item['name'],
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  // Deskripsi Menu
+                  Text(
+                    item['description'],
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      color: AppTheme.textLight,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Kalori Menu
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withAlpha(26),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.local_fire_department,
                           color: AppTheme.primaryColor,
+                          size: 20,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              item['name'],
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: AppTheme.textDark,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              item['description'],
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppTheme.textLight,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.accentColor.withAlpha(26),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          'Rp${item['price']}',
+                        const SizedBox(width: 8),
+                        Text(
+                          '${item['calories']} Kalori',
                           style: GoogleFonts.poppins(
                             fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.accentColor,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.primaryColor,
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Nutrisi: Protein / Karbo / Lemak
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildNutrientCard(
+                          'Protein',
+                          '${item['protein']}g',
+                          Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildNutrientCard(
+                          'Karbo',
+                          '${item['carbs']}g',
+                          Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildNutrientCard(
+                          'Lemak',
+                          '${item['fat']}g',
+                          Colors.red,
                         ),
                       ),
                     ],
@@ -210,10 +264,64 @@ class _AdminManageMenuScreenState extends State<AdminManageMenuScreen> {
       ),
     );
   }
+
+  Widget _buildNutrientCard(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withAlpha(26),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class AddMenuDialog extends StatelessWidget {
+class AddMenuDialog extends StatefulWidget {
   const AddMenuDialog({super.key});
+
+  @override
+  State<AddMenuDialog> createState() => _AddMenuDialogState();
+}
+
+class _AddMenuDialogState extends State<AddMenuDialog> {
+  final nameController = TextEditingController();
+  final descriptionController = TextEditingController();
+  final caloriesController = TextEditingController();
+  final proteinController = TextEditingController();
+  final carbsController = TextEditingController();
+  final fatController = TextEditingController();
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -222,27 +330,161 @@ class AddMenuDialog extends StatelessWidget {
         'Tambah Menu',
         style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
       ),
-      content: Text(
-        'Feature belum diimplementasikan',
-        style: GoogleFonts.inter(),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: _pickImage,
+              child: _imageFile == null
+                  ? Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.add_a_photo,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        _imageFile!,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Nama Menu'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(labelText: 'Deskripsi Menu'),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: caloriesController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Kalori'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: proteinController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Protein (g)'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: carbsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Karbo (g)'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: fatController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Lemak (g)'),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Tutup',
+            'Batal',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            // Logika penyimpanan data
+            Navigator.pop(context);
+          },
+          child: Text(
+            'Simpan',
             style: GoogleFonts.inter(fontWeight: FontWeight.w600),
           ),
         ),
       ],
     );
   }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    descriptionController.dispose();
+    caloriesController.dispose();
+    proteinController.dispose();
+    carbsController.dispose();
+    fatController.dispose();
+    super.dispose();
+  }
 }
 
-class EditMenuDialog extends StatelessWidget {
+class EditMenuDialog extends StatefulWidget {
   final Map<String, dynamic> item;
 
   const EditMenuDialog({super.key, required this.item});
+
+  @override
+  State<EditMenuDialog> createState() => _EditMenuDialogState();
+}
+
+class _EditMenuDialogState extends State<EditMenuDialog> {
+  late TextEditingController nameController;
+  late TextEditingController descriptionController;
+  late TextEditingController caloriesController;
+  late TextEditingController proteinController;
+  late TextEditingController carbsController;
+  late TextEditingController fatController;
+  File? _imageFile;
+  final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.item['name']);
+    descriptionController =
+        TextEditingController(text: widget.item['description']);
+    caloriesController =
+        TextEditingController(text: widget.item['calories'].toString());
+    proteinController =
+        TextEditingController(text: widget.item['protein'].toString());
+    carbsController =
+        TextEditingController(text: widget.item['carbs'].toString());
+    fatController = TextEditingController(text: widget.item['fat'].toString());
+    if (widget.item['image'] != null) {
+      _imageFile = File(widget.item['image']);
+    }
+  }
+
+  Future<void> _pickImage() async {
+    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        _imageFile = File(pickedFile.path);
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -251,19 +493,112 @@ class EditMenuDialog extends StatelessWidget {
         'Edit Menu',
         style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
       ),
-      content: Text(
-        'Feature belum diimplementasikan',
-        style: GoogleFonts.inter(),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: _pickImage,
+              child: _imageFile == null
+                  ? Container(
+                      width: 100,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.add_a_photo,
+                        size: 40,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(
+                        _imageFile!,
+                        width: 100,
+                        height: 100,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(labelText: 'Nama Menu'),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(labelText: 'Deskripsi Menu'),
+              maxLines: 2,
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: caloriesController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Kalori'),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: proteinController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Protein (g)'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: carbsController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(labelText: 'Karbo (g)'),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: fatController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Lemak (g)'),
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(
-            'Tutup',
+            'Batal',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          ),
+        ),
+        TextButton(
+          onPressed: () {
+            // Logika penyimpanan data
+            Navigator.pop(context);
+          },
+          child: Text(
+            'Simpan',
             style: GoogleFonts.inter(fontWeight: FontWeight.w600),
           ),
         ),
       ],
     );
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    descriptionController.dispose();
+    caloriesController.dispose();
+    proteinController.dispose();
+    carbsController.dispose();
+    fatController.dispose();
+    super.dispose();
   }
 }
