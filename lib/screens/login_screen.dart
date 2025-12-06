@@ -3,6 +3,8 @@ import 'package:flutter/gestures.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'main_navigation.dart';
 import 'register_screen.dart';
 import 'admin_dashboard.dart';
@@ -18,11 +20,11 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   String _selectedRole = 'user';
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
-  // Admin credentials yang sudah tersimpan
   static const List<Map<String, String>> _defaultAdmins = [
     {'email': 'admin1@email.com', 'password': 'admin123', 'name': 'Admin 1'},
     {'email': 'nailacahya580@gmail.com', 'password': '123456', 'name': 'cahya nayla'},
@@ -37,20 +39,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _initializeAdmins() async {
     final prefs = await SharedPreferences.getInstance();
-    
-    // Cek apakah admin sudah tersimpan
-    final adminsJson = prefs.getString('admins');
-    if (adminsJson == null) {
-      // Simpan admin default jika belum ada
+
+    if (!prefs.containsKey('admins')) {
       await prefs.setString('admins', jsonEncode(_defaultAdmins));
     }
   }
 
   Future<void> _loadSavedLogin() async {
     final prefs = await SharedPreferences.getInstance();
+
     final savedEmail = prefs.getString('saved_admin_email');
     final savedPassword = prefs.getString('saved_admin_password');
-    
+
     if (savedEmail != null && savedPassword != null) {
       setState(() {
         _emailController.text = savedEmail;
@@ -71,37 +71,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final prefs = await SharedPreferences.getInstance();
 
+    // =======================
+    // LOGIN ADMIN (LOCAL)
+    // =======================
     if (_selectedRole == 'admin') {
-      // Check admin credentials
       final adminsJson = prefs.getString('admins');
       List admins = [];
-      if (adminsJson != null) {
-        try {
-          admins = jsonDecode(adminsJson);
-        } catch (_) {
-          admins = _defaultAdmins;
-        }
-      } else {
+
+      try {
+        admins = adminsJson != null ? jsonDecode(adminsJson) : _defaultAdmins;
+      } catch (_) {
         admins = _defaultAdmins;
       }
 
-      final matchedAdmin = admins.firstWhere(
-        (a) =>
-            a['email'] == _emailController.text &&
-            a['password'] == _passwordController.text,
-        orElse: () => null,
-      );
+      final matchedAdmin = admins.where((a) =>
+          a['email'] == _emailController.text &&
+          a['password'] == _passwordController.text).toList();
 
-      if (matchedAdmin == null) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email atau password admin salah!')),
-          );
-        }
+      if (matchedAdmin.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email atau password admin salah!')),
+        );
         return;
       }
 
-      // Simpan login jika remember me diaktifkan
       if (_rememberMe) {
         await prefs.setString('saved_admin_email', _emailController.text);
         await prefs.setString('saved_admin_password', _passwordController.text);
@@ -110,7 +103,6 @@ class _LoginScreenState extends State<LoginScreen> {
         await prefs.remove('saved_admin_password');
       }
 
-      // Set session current user
       await prefs.setString('current_user_email', _emailController.text);
       await prefs.setString('current_user_role', 'admin');
 
@@ -120,71 +112,18 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const AdminDashboard()),
         );
       }
-    } else {
-      // Check user credentials
-      final usersJson = prefs.getString('users');
-      List users = [];
-      if (usersJson != null) {
-        try {
-          users = jsonDecode(usersJson);
-        } catch (_) {
-          users = [];
-        }
-      }
+      return;
+    }
 
-      final matched = users.firstWhere(
-        (u) =>
-            u['email'] == _emailController.text &&
-            u['password'] == _passwordController.text,
-        orElse: () => null,
+    // =======================
+    // LOGIN USER (FIREBASE)
+    // =======================
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
       );
-      if (matched == null) {
-        // Check if email exists at all
-        final exists = users.any((u) => u['email'] == _emailController.text);
-        if (!exists) {
-          // Offer to register with this email
-          if (mounted) {
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: Text('Akun tidak ditemukan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                content: Text('Email belum terdaftar. Ingin mendaftar sekarang?', style: GoogleFonts.inter()),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Batal', style: GoogleFonts.inter()),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RegisterScreen(
-                            initialEmail: _emailController.text,
-                            initialPassword: _passwordController.text,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Text('Daftar', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
-                  ),
-                ],
-              ),
-            );
-          }
-          return;
-        }
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email atau password salah!')),
-          );
-        }
-        return;
-      }
-
-      // Set session current user
       await prefs.setString('current_user_email', _emailController.text);
       await prefs.setString('current_user_role', 'user');
 
@@ -194,6 +133,13 @@ class _LoginScreenState extends State<LoginScreen> {
           MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
       }
+    } catch (_) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Email atau password salah"),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -213,7 +159,7 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Logo
+            // HEADER IMAGE
             Container(
               height: 120,
               decoration: BoxDecoration(
@@ -225,23 +171,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Image.asset(
                   'assets/images/healthy.jpeg',
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: AppTheme.primaryColor,
-                      child: const Icon(
-                        Icons.restaurant,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    );
-                  },
                 ),
               ),
             ),
 
             const SizedBox(height: 40),
 
-            // Judul
             Text(
               'Masuk',
               style: GoogleFonts.poppins(
@@ -250,63 +185,66 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: AppTheme.textDark,
               ),
             ),
+
             const SizedBox(height: 8),
+
             Text(
               'Akses informasi menu dan kalori',
               style: GoogleFonts.inter(
                 fontSize: 14,
-                fontWeight: FontWeight.w400,
                 color: AppTheme.textLight,
               ),
             ),
 
             const SizedBox(height: 32),
 
-            // Email Input
+            // EMAIL
             Text(
-              'Email',
+              "Email",
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textDark,
               ),
             ),
+
             const SizedBox(height: 8),
+
             TextField(
               controller: _emailController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'nama@email.com',
-                prefixIcon: const Icon(Icons.email_outlined),
-                prefixIconColor: AppTheme.textLight,
+                prefixIcon: Icon(Icons.email_outlined),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // Password Input
+            // PASSWORD
             Text(
-              'Password',
+              "Password",
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textDark,
               ),
             ),
+
             const SizedBox(height: 8),
+
             TextField(
               controller: _passwordController,
               obscureText: _obscurePassword,
               decoration: InputDecoration(
                 hintText: 'Masukkan password',
                 prefixIcon: const Icon(Icons.lock_outline),
-                prefixIconColor: AppTheme.textLight,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                    color: AppTheme.textLight,
-                  ),
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility),
                   onPressed: () {
-                    setState(() => _obscurePassword = !_obscurePassword);
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
                   },
                 ),
               ),
@@ -314,83 +252,64 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 20),
 
-            // Role Selection
+            // ROLE DROPDOWN
             Text(
-              'Login sebagai',
+              "Login sebagai",
               style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.textDark,
               ),
             ),
+
             const SizedBox(height: 8),
+
             Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
                 border: Border.all(color: const Color(0xFFE5E7EB)),
                 borderRadius: BorderRadius.circular(12),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: DropdownButton<String>(
                 value: _selectedRole,
                 isExpanded: true,
                 underline: const SizedBox(),
-                items: [
-                  DropdownMenuItem(
-                    value: 'user',
-                    child: Text(
-                      'User',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  DropdownMenuItem(
-                    value: 'admin',
-                    child: Text(
-                      'Admin',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
+                items: const [
+                  DropdownMenuItem(value: 'user', child: Text('User')),
+                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
-                onChanged: (v) => setState(() => _selectedRole = v ?? 'user'),
+                onChanged: (v) {
+                  setState(() {
+                    _selectedRole = v!;
+                  });
+                },
               ),
             ),
 
-            const SizedBox(height: 16),
-
-            // Remember Me Checkbox (hanya untuk admin)
-            if (_selectedRole == 'admin')
+            if (_selectedRole == 'admin') ...[
+              const SizedBox(height: 16),
               Row(
                 children: [
                   Checkbox(
                     value: _rememberMe,
-                    onChanged: (value) {
-                      setState(() => _rememberMe = value ?? false);
+                    onChanged: (v) {
+                      setState(() {
+                        _rememberMe = v ?? false;
+                      });
                     },
-                    activeColor: AppTheme.primaryColor,
                   ),
-                  Text(
-                    'Ingat saya',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.textDark,
-                    ),
-                  ),
+                  const Text("Ingat saya"),
                 ],
-              ),
+              )
+            ],
 
             const SizedBox(height: 32),
 
-            // Login Button
+            // BUTTON LOGIN
             ElevatedButton(
               onPressed: _handleLogin,
               child: Text(
-                'Masuk',
+                "Masuk",
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -401,64 +320,46 @@ class _LoginScreenState extends State<LoginScreen> {
 
             const SizedBox(height: 24),
 
-            // Divider
             Row(
               children: [
-                Expanded(
-                  child: Divider(color: AppTheme.textLight.withAlpha(77)),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Text(
-                    'atau',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      color: AppTheme.textLight,
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: Divider(color: AppTheme.textLight.withAlpha(77)),
-                ),
+                Expanded(child: Divider(color: AppTheme.textLight)),
+                const SizedBox(width: 12),
+                Text("atau",
+                    style: GoogleFonts.inter(color: AppTheme.textLight)),
+                const SizedBox(width: 12),
+                Expanded(child: Divider(color: AppTheme.textLight)),
               ],
             ),
 
             const SizedBox(height: 24),
 
-            // Register Link
             Center(
               child: RichText(
                 text: TextSpan(
                   children: [
                     TextSpan(
                       text: 'Belum punya akun? ',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: AppTheme.textLight,
-                      ),
+                      style: GoogleFonts.inter(color: AppTheme.textLight),
                     ),
                     TextSpan(
                       text: 'Daftar',
                       style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
                         color: AppTheme.accentColor,
-                        decoration: TextDecoration.underline,
+                        fontWeight: FontWeight.w600,
                       ),
                       recognizer: TapGestureRecognizer()
                         ..onTap = () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const RegisterScreen(),
-                            ),
+                                builder: (context) => const RegisterScreen()),
                           );
                         },
                     ),
                   ],
                 ),
               ),
-            ),
+            )
           ],
         ),
       ),

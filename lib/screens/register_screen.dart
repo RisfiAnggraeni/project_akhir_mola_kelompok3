@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
 import 'login_screen.dart';
 import 'main_navigation.dart';
 import '../utils/theme.dart';
@@ -33,13 +34,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void initState() {
     super.initState();
-    // Prefill with initial values if provided
     if (widget.initialEmail != null) {
       _emailController.text = widget.initialEmail!;
     }
     if (widget.initialPassword != null) {
       _passwordController.text = widget.initialPassword!;
     }
+
     SharedPreferences.getInstance().then((prefs) {
       final usersJson = prefs.getString('users');
       bool hasAdmin = false;
@@ -59,15 +60,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordController.text.isEmpty ||
         _phoneController.text.isEmpty ||
         _addressController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Semua field harus diisi!')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Semua field harus diisi!')));
       return;
     }
 
+    try {
+      // 🔥 REGISTER KE FIREBASE
+      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Firebase Error: $e")),
+      );
+      return;
+    }
+
+    // 🔥 LANJUT SharedPreferences (tidak dihapus)
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString('users');
     List users = [];
+
     if (usersJson != null) {
       try {
         users = jsonDecode(usersJson);
@@ -78,9 +93,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final exists = users.any((u) => u['email'] == _emailController.text);
     if (exists) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Email sudah terdaftar')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Email sudah terdaftar')));
       return;
     }
 
@@ -92,17 +106,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'address': _addressController.text,
       'role': _selectedRole,
     };
+
     users.add(newUser);
     await prefs.setString('users', jsonEncode(users));
     await prefs.setString('current_user_email', _emailController.text);
     await prefs.setString('current_user_role', _selectedRole);
 
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat!')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat!')));
 
-      // After registration, navigate directly into the app for users
       if (_selectedRole == 'user') {
         Navigator.pushReplacement(
           context,
@@ -166,151 +179,128 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+
+              // ===================== FORM =====================
+
               _buildFieldLabel('Nama Lengkap'),
               const SizedBox(height: 8),
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Masukkan nama lengkap',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  prefixIconColor: AppTheme.textLight,
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
               const SizedBox(height: 20),
+
               _buildFieldLabel('Email'),
               const SizedBox(height: 8),
               TextField(
                 controller: _emailController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'nama@email.com',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  prefixIconColor: AppTheme.textLight,
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
               const SizedBox(height: 20),
+
               _buildFieldLabel('Nomor Telepon'),
               const SizedBox(height: 8),
               TextField(
                 controller: _phoneController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: '08xxxxxxxxxx',
-                  prefixIcon: const Icon(Icons.phone_outlined),
-                  prefixIconColor: AppTheme.textLight,
+                  prefixIcon: Icon(Icons.phone_outlined),
                 ),
               ),
               const SizedBox(height: 20),
+
               _buildFieldLabel('Alamat'),
               const SizedBox(height: 8),
               TextField(
                 controller: _addressController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Masukkan alamat lengkap',
-                  prefixIcon: const Icon(Icons.location_on_outlined),
-                  prefixIconColor: AppTheme.textLight,
+                  prefixIcon: Icon(Icons.location_on_outlined),
                 ),
               ),
               const SizedBox(height: 20),
+
               _buildFieldLabel('Password'),
               const SizedBox(height: 8),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   hintText: 'Masukkan password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  prefixIconColor: AppTheme.textLight,
+                  prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
               const SizedBox(height: 20),
+
               _buildFieldLabel('Daftar Sebagai'),
               const SizedBox(height: 8),
+
               if (_allowAdmin)
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     Expanded(
-                      child: RadioListTile<String>(
-                        title: Text(
-                          'User',
-                          style: GoogleFonts.inter(fontSize: 14),
-                        ),
+                      child: RadioListTile(
+                        title: const Text('User'),
                         value: 'user',
                         groupValue: _selectedRole,
                         onChanged: (v) => setState(() => _selectedRole = v!),
-                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                     Expanded(
-                      child: RadioListTile<String>(
-                        title: Text(
-                          'Admin',
-                          style: GoogleFonts.inter(fontSize: 14),
-                        ),
+                      child: RadioListTile(
+                        title: const Text('Admin'),
                         value: 'admin',
                         groupValue: _selectedRole,
                         onChanged: (v) => setState(() => _selectedRole = v!),
-                        contentPadding: EdgeInsets.zero,
                       ),
                     ),
                   ],
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withAlpha(26),
+                    color: AppTheme.primaryColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    'User (Admin sudah ada)',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.primaryColor,
-                    ),
+                    "User (Admin sudah ada)",
+                    style: TextStyle(color: AppTheme.primaryColor),
                   ),
                 ),
+
               const SizedBox(height: 32),
+
               ElevatedButton(
                 onPressed: _saveUserData,
-                child: Text(
-                  'Daftar',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
+                child: const Text('Daftar'),
               ),
+
               const SizedBox(height: 16),
+
               Center(
                 child: RichText(
                   text: TextSpan(
                     children: [
                       TextSpan(
                         text: 'Sudah punya akun? ',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          color: AppTheme.textLight,
-                        ),
+                        style: TextStyle(color: AppTheme.textLight),
                       ),
                       TextSpan(
                         text: 'Masuk',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.accentColor,
-                        ),
+                        style: TextStyle(color: AppTheme.accentColor),
                         recognizer: TapGestureRecognizer()
                           ..onTap = () {
                             Navigator.pushReplacement(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
-                              ),
+                                  builder: (context) => const LoginScreen()),
                             );
                           },
                       ),
