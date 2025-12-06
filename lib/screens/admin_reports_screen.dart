@@ -1,11 +1,66 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../utils/theme.dart';
 import 'admin_manage_users_screen.dart';
 import 'admin_manage_menu_screen.dart';
 
-class AdminReportsScreen extends StatelessWidget {
+class AdminReportsScreen extends StatefulWidget {
   const AdminReportsScreen({super.key});
+
+  @override
+  State<AdminReportsScreen> createState() => _AdminReportsScreenState();
+}
+
+class _AdminReportsScreenState extends State<AdminReportsScreen> {
+  int _totalUsers = 0;
+  int _totalCalories = 4250;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReportData();
+  }
+
+  Future<void> _loadReportData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      // Ambil data users dari SharedPreferences
+      final usersJson = prefs.getString('users');
+      int userCount = 0;
+      
+      if (usersJson != null && usersJson.isNotEmpty) {
+        try {
+          final users = jsonDecode(usersJson) as List;
+          userCount = users.length;
+        } catch (e) {
+          print('Error parsing users: $e');
+          userCount = 0;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _totalUsers = userCount;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading report data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,49 +77,64 @@ class AdminReportsScreen extends StatelessWidget {
         ),
         backgroundColor: AppTheme.primaryColor,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Data',
+            onPressed: _loadReportData,
+          ),
+        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildStatCard(context,
-              title: 'Total Pengguna',
-              value: '24',
-              icon: Icons.people,
-              color: const Color(0xFF3B82F6),
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(),
+            )
+          : RefreshIndicator(
+              onRefresh: _loadReportData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildStatCard(context,
+                      title: 'Total Pengguna',
+                      value: '$_totalUsers',
+                      icon: Icons.people,
+                      color: const Color(0xFF3B82F6),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildStatCard(context,
+                      title: 'Total Menu Kalori',
+                      value: '$_totalCalories',
+                      icon: Icons.local_fire_department,
+                      color: const Color(0xFFFF6B6B),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildReportSection(context,
+                      title: 'Pencarian Terpopuler',
+                      items: const ['Nasi Goreng', 'Burger', 'Kopi Susu'],
+                      icon: Icons.trending_up,
+                      color: const Color(0xFF10B981),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildReportSection(context,
+                      title: 'Menu Kalori Tertinggi/Terendah',
+                      items: const ['Tertinggi: Pasta (310)', 'Terendah: Es Teh Manis (90)'],
+                      icon: Icons.trending_down,
+                      color: const Color(0xFFFFA500),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildReportSection(context,
+                      title: 'Menu Ditambahkan Bulan Ini',
+                      items: const ['Pasta', 'Smoothie Pisang', 'Sate Ayam'],
+                      icon: Icons.add_circle_outline,
+                      color: const Color(0xFF8B5CF6),
+                    ),
+                  ],
+                ),
+              ),
             ),
-            const SizedBox(height: 16),
-            _buildStatCard(context,
-              title: 'Total Menu Kalori',
-              value: '4250',
-              icon: Icons.local_fire_department,
-              color: const Color(0xFFFF6B6B),
-            ),
-            const SizedBox(height: 16),
-            _buildReportSection(context,
-              title: 'Pencarian Terpopuler',
-              items: const ['Nasi Goreng', 'Burger', 'Kopi Susu'],
-              icon: Icons.trending_up,
-              color: const Color(0xFF10B981),
-            ),
-            const SizedBox(height: 16),
-            _buildReportSection(context,
-              title: 'Menu Kalori Tertinggi/Terendah',
-              items: const ['Tertinggi: Pasta (310)', 'Terendah: Es Teh Manis (90)'],
-              icon: Icons.trending_down,
-              color: const Color(0xFFFFA500),
-            ),
-            const SizedBox(height: 16),
-            _buildReportSection(context,
-              title: 'Menu Ditambahkan Bulan Ini',
-              items: const ['Pasta', 'Smoothie Pisang', 'Sate Ayam'],
-              icon: Icons.add_circle_outline,
-              color: const Color(0xFF8B5CF6),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -86,7 +156,7 @@ class AdminReportsScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                     builder: (c) => const AdminManageUsersScreen()),
-              );
+              ).then((_) => _loadReportData()); // Refresh setelah kembali
             },
             child: Text('Lihat Pengguna', style: GoogleFonts.inter()),
           ));

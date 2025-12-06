@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "271693004632",
+    "project_id": "utp-loginflutter",
+    "storage_bucket": "utp-loginflutter.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:271693004632:android:a2bbba9b7f84fee50a6f2d",
+        "android_client_info": {
+          "package_name": "com.example.myapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3svytjHvX7XAudmJGXPGxgOe4Q4rXZXA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

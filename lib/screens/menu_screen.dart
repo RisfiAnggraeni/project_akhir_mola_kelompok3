@@ -15,18 +15,29 @@ class MenuScreen extends StatefulWidget {
 
 class _MenuScreenState extends State<MenuScreen> {
   double totalKalori = 0;
-  double dailyTarget = 2000; // default target kalori per hari
+  double dailyTarget = 2000;
+  String currentUserEmail = '';
 
   @override
   void initState() {
     super.initState();
-    _loadDailyTarget();
+    _loadCurrentUser();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final email = prefs.getString('current_user_email') ?? '';
+    setState(() {
+      currentUserEmail = email;
+    });
+    await _loadDailyTarget();
+    await _loadTodaysTotalFromHistory();
   }
 
   Future<void> _loadDailyTarget() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final saved = prefs.getDouble('daily_target');
+      final saved = prefs.getDouble('daily_target_$currentUserEmail');
       if (saved != null) {
         setState(() {
           dailyTarget = saved;
@@ -37,7 +48,7 @@ class _MenuScreenState extends State<MenuScreen> {
 
   Future<void> _saveDailyTarget(double value) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble('daily_target', value);
+    await prefs.setDouble('daily_target_$currentUserEmail', value);
     setState(() {
       dailyTarget = value;
     });
@@ -76,7 +87,6 @@ class _MenuScreenState extends State<MenuScreen> {
     );
   }
 
-  // 🔹 Semua Makanan
   final List<Map<String, dynamic>> foodItems = [
     {
       'name': 'Pizza',
@@ -142,7 +152,6 @@ class _MenuScreenState extends State<MenuScreen> {
     },
   ];
 
-  // 🔹 Semua Minuman
   final List<Map<String, dynamic>> drinkItems = [
     {
       'name': 'Es Teh Manis',
@@ -206,7 +215,10 @@ class _MenuScreenState extends State<MenuScreen> {
   Future<void> _saveConsumption(String name, double calories) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final histJson = prefs.getString('consumption_history');
+      
+      // Simpan history per user dengan key 'consumption_history_EMAIL'
+      final historyKey = 'consumption_history_$currentUserEmail';
+      final histJson = prefs.getString(historyKey);
       List history = [];
       if (histJson != null) {
         try {
@@ -221,19 +233,23 @@ class _MenuScreenState extends State<MenuScreen> {
         'date': now.toIso8601String(),
         'name': name,
         'calories': calories,
+        'userEmail': currentUserEmail, // Tambahkan email user
       };
       history.add(entry);
-      await prefs.setString('consumption_history', jsonEncode(history));
+      await prefs.setString(historyKey, jsonEncode(history));
 
-      // recompute today's total
+      // Recompute today's total
       _loadTodaysTotalFromHistory();
-    } catch (_) {}
+    } catch (e) {
+      print('Error saving consumption: $e');
+    }
   }
 
   Future<void> _loadTodaysTotalFromHistory() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final histJson = prefs.getString('consumption_history');
+      final historyKey = 'consumption_history_$currentUserEmail';
+      final histJson = prefs.getString(historyKey);
       double sum = 0;
       if (histJson != null) {
         final history = jsonDecode(histJson) as List;
@@ -248,7 +264,9 @@ class _MenuScreenState extends State<MenuScreen> {
         }
       }
       if (mounted) setState(() => totalKalori = sum);
-    } catch (_) {}
+    } catch (e) {
+      print('Error loading today\'s total: $e');
+    }
   }
 
   @override
@@ -274,7 +292,7 @@ class _MenuScreenState extends State<MenuScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (c) => const CalorieHistoryScreen()),
-                );
+                ).then((_) => _loadTodaysTotalFromHistory());
               },
               icon: const Icon(Icons.history),
             ),
@@ -358,7 +376,6 @@ class _MenuScreenState extends State<MenuScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Progress bar
                   Builder(builder: (context) {
                     final percent = (dailyTarget <= 0)
                         ? 0.0
