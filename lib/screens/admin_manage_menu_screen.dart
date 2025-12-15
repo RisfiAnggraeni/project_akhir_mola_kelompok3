@@ -108,7 +108,7 @@ class _AdminManageMenuScreenState extends State<AdminManageMenuScreen> {
     },
     {
       'name': 'Smoothie Pisang',
-      'image': 'assets/images/smoothie_pisang.jpeg',
+      'image': 'assets/images/smoothie_pisang.jpg',
       'desc': 'Smoothie pisang dengan yogurt dan madu alami.',
       'nutrition': {'kalori': 180, 'protein': 4, 'lemak': 2, 'karbohidrat': 38},
     },
@@ -397,7 +397,7 @@ class _AdminManageMenuScreenState extends State<AdminManageMenuScreen> {
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
-                                  color: AppTheme.accentColor,
+                                  color:  const Color.fromARGB(255, 24, 168, 11),
                                 ),
                               ),
                             ),

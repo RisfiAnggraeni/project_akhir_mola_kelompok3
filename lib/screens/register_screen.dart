@@ -28,8 +28,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  String _selectedRole = 'user';
-  bool _allowAdmin = true;
 
   @override
   void initState() {
@@ -40,18 +38,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (widget.initialPassword != null) {
       _passwordController.text = widget.initialPassword!;
     }
-
-    SharedPreferences.getInstance().then((prefs) {
-      final usersJson = prefs.getString('users');
-      bool hasAdmin = false;
-      if (usersJson != null) {
-        try {
-          final List users = jsonDecode(usersJson);
-          hasAdmin = users.any((u) => (u['role'] ?? 'user') == 'admin');
-        } catch (_) {}
-      }
-      if (mounted) setState(() => _allowAdmin = !hasAdmin);
-    });
   }
 
   Future<void> _saveUserData() async {
@@ -66,7 +52,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     try {
-      // 🔥 REGISTER KE FIREBASE
+      // 🔥 REGISTER FIREBASE (USER ONLY)
       await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -78,7 +64,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    // 🔥 LANJUT SharedPreferences (tidak dihapus)
     final prefs = await SharedPreferences.getInstance();
     final usersJson = prefs.getString('users');
     List users = [];
@@ -104,29 +89,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
       'password': _passwordController.text,
       'phone': _phoneController.text,
       'address': _addressController.text,
-      'role': _selectedRole,
+      'role': 'user', // 🔒 PAKSA USER
     };
 
     users.add(newUser);
     await prefs.setString('users', jsonEncode(users));
     await prefs.setString('current_user_email', _emailController.text);
-    await prefs.setString('current_user_role', _selectedRole);
+    await prefs.setString('current_user_role', 'user');
 
     if (mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Akun berhasil dibuat!')));
 
-      if (_selectedRole == 'user') {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainNavigation()),
-        );
-      } else {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const MainNavigation()),
+      );
     }
   }
 
@@ -179,8 +157,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // ===================== FORM =====================
 
               _buildFieldLabel('Nama Lengkap'),
               const SizedBox(height: 8),
@@ -236,45 +212,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
-              const SizedBox(height: 20),
-
-              _buildFieldLabel('Daftar Sebagai'),
-              const SizedBox(height: 8),
-
-              if (_allowAdmin)
-                Row(
-                  children: [
-                    Expanded(
-                      child: RadioListTile(
-                        title: const Text('User'),
-                        value: 'user',
-                        groupValue: _selectedRole,
-                        onChanged: (v) => setState(() => _selectedRole = v!),
-                      ),
-                    ),
-                    Expanded(
-                      child: RadioListTile(
-                        title: const Text('Admin'),
-                        value: 'admin',
-                        groupValue: _selectedRole,
-                        onChanged: (v) => setState(() => _selectedRole = v!),
-                      ),
-                    ),
-                  ],
-                )
-              else
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    "User (Admin sudah ada)",
-                    style: TextStyle(color: AppTheme.primaryColor),
-                  ),
-                ),
-
               const SizedBox(height: 32),
 
               ElevatedButton(

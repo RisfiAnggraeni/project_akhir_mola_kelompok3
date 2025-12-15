@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import 'menu_screen.dart';       // 🥗 Akan diubah jadi tampilan info gizi
-import 'profile_screen.dart';    // 👤 Tetap ada untuk profil
-import 'login_screen.dart';      // 🚪 Untuk logout dan login ulang
+import 'menu_screen.dart';
+import 'profile_screen.dart';
+import 'login_screen.dart';
+
+// Definisi warna hijau tua yang seragam
+const Color _darkGreenPrimary = Color(0xFF1E8449);
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -14,17 +17,19 @@ class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = const [
-    MenuScreen(),        // Beranda / Info Makanan
-    ProfileScreen(),     // Profil
+    MenuScreen(),
+    ProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _currentIndex < 2 ? _pages[_currentIndex] : const SizedBox(),
+      body: _currentIndex < _pages.length
+          ? _pages[_currentIndex]
+          : const SizedBox(),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.redAccent, // 🔴 warna bawah
+        backgroundColor: _darkGreenPrimary,
         selectedItemColor: Colors.white,
         unselectedItemColor: Colors.white70,
         currentIndex: _currentIndex,
@@ -47,7 +52,8 @@ class _MainNavigationState extends State<MainNavigation> {
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
-                            builder: (context) => const LoginScreen()),
+                          builder: (_) => const LoginScreen(),
+                        ),
                         (route) => false,
                       );
                     },

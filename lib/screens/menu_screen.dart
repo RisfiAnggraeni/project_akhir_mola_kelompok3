@@ -14,14 +14,33 @@ class MenuScreen extends StatefulWidget {
 }
 
 class _MenuScreenState extends State<MenuScreen> {
+  // Warna hijau tua baru
+  static const Color _darkGreenPrimary = Color(0xFF1E8449); // Warna Hijau Tua yang dipilih
+
   double totalKalori = 0;
   double dailyTarget = 2000;
   String currentUserEmail = '';
+  // State baru untuk fungsionalitas pencarian
+  final TextEditingController _searchController = TextEditingController();
+  String _searchText = '';
 
   @override
   void initState() {
     super.initState();
     _loadCurrentUser();
+    // Tambahkan listener untuk controller pencarian
+    _searchController.addListener(() {
+      setState(() {
+        _searchText = _searchController.text;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    // Bersihkan controller saat widget dihapus
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCurrentUser() async {
@@ -194,6 +213,12 @@ class _MenuScreenState extends State<MenuScreen> {
       'desc': 'Minuman hijau segar dengan aroma matcha yang menenangkan.',
       'nutrition': {'kalori': 160, 'protein': 5, 'lemak': 4, 'karbohidrat': 20},
     },
+    {
+      'name': 'Smoothie Pisang',
+      'image': 'assets/images/Smoothie_Pisang.jpg',
+      'desc': 'Minuman segar, lezat dan bergizi.',
+      'nutrition': {'kalori': 180, 'protein': 4, 'lemak': 2, 'karbohidrat': 38},
+    }
   ];
 
   void tambahKalori(double kalori, String nama) {
@@ -206,7 +231,7 @@ class _MenuScreenState extends State<MenuScreen> {
         content: Text(
           '$nama ditambahkan! (+${kalori.toStringAsFixed(0)} kcal)',
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: _darkGreenPrimary, // Menggunakan warna baru
         duration: const Duration(seconds: 2),
       ),
     );
@@ -269,6 +294,20 @@ class _MenuScreenState extends State<MenuScreen> {
     }
   }
 
+  // Fungsi untuk memfilter daftar item
+  List<Map<String, dynamic>> _filterItems(List<Map<String, dynamic>> items) {
+    if (_searchText.isEmpty) {
+      return items;
+    }
+    final query = _searchText.toLowerCase();
+    return items.where((item) {
+      final name = (item['name'] as String).toLowerCase();
+      final desc = (item['desc'] as String).toLowerCase();
+      // Filter berdasarkan nama atau deskripsi
+      return name.contains(query) || desc.contains(query);
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
@@ -284,7 +323,7 @@ class _MenuScreenState extends State<MenuScreen> {
               color: Colors.white,
             ),
           ),
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: _darkGreenPrimary, // Ganti warna
           centerTitle: true,
           actions: [
             IconButton(
@@ -300,7 +339,7 @@ class _MenuScreenState extends State<MenuScreen> {
           bottom: TabBar(
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
-            indicatorColor: AppTheme.accentColor,
+            indicatorColor: Colors.white, // Ganti indikator agar terlihat lebih jelas di atas warna gelap
             indicatorWeight: 3,
             tabs: [
               Tab(
@@ -318,6 +357,7 @@ class _MenuScreenState extends State<MenuScreen> {
             ],
           ),
         ),
+        
         body: Column(
           children: [
             Container(
@@ -341,12 +381,12 @@ class _MenuScreenState extends State<MenuScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentColor.withAlpha(26),
+                          color: _darkGreenPrimary, // Ganti warna latar belakang ikon
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(
+                        child: const Icon( // Ganti warna ikon menjadi putih
                           Icons.local_fire_department,
-                          color: AppTheme.accentColor,
+                          color: Colors.white, 
                           size: 24,
                         ),
                       ),
@@ -368,7 +408,7 @@ class _MenuScreenState extends State<MenuScreen> {
                             style: GoogleFonts.poppins(
                               fontSize: 22,
                               fontWeight: FontWeight.w700,
-                              color: AppTheme.accentColor,
+                              color: _darkGreenPrimary, // Ganti warna teks kalori
                             ),
                           ),
                         ],
@@ -422,7 +462,7 @@ class _MenuScreenState extends State<MenuScreen> {
                             minHeight: 12,
                             value: percent,
                             backgroundColor: Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(_darkGreenPrimary), // Ganti warna progress bar
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -451,11 +491,42 @@ class _MenuScreenState extends State<MenuScreen> {
                 ],
               ),
             ),
+            // --- Fitur Pencarian ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Cari menu...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchText.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {
+                              _searchText = '';
+                            });
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide.none,
+                  ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 10),
+                ),
+                style: GoogleFonts.inter(),
+              ),
+            ),
+            // ----------------------------------------
             Expanded(
               child: TabBarView(
                 children: [
-                  _buildMenuList(foodItems),
-                  _buildMenuList(drinkItems),
+                  _buildMenuList(_filterItems(foodItems)), // Menggunakan fungsi filter
+                  _buildMenuList(_filterItems(drinkItems)), // Menggunakan fungsi filter
                 ],
               ),
             ),
@@ -466,6 +537,15 @@ class _MenuScreenState extends State<MenuScreen> {
   }
 
   Widget _buildMenuList(List<Map<String, dynamic>> items) {
+    if (items.isEmpty && _searchText.isNotEmpty) {
+      return Center(
+        child: Text(
+          'Tidak ada hasil untuk "$_searchText"',
+          style: GoogleFonts.inter(fontSize: 16, color: AppTheme.textLight),
+        ),
+      );
+    }
+    
     return ListView.builder(
       padding: const EdgeInsets.all(16),
       itemCount: items.length,
@@ -548,7 +628,8 @@ class _MenuScreenState extends State<MenuScreen> {
                               vertical: 6,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.accentColor.withAlpha(26),
+                              // Menggunakan background hijau tua
+                              color: _darkGreenPrimary, 
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -556,7 +637,8 @@ class _MenuScreenState extends State<MenuScreen> {
                               style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.accentColor,
+                                // MEMASTIKAN TEKS BERWARNA PUTIH agar kontras dengan background hijau tua
+                                color: Colors.white, 
                               ),
                             ),
                           ),
@@ -571,7 +653,7 @@ class _MenuScreenState extends State<MenuScreen> {
                             item['name'],
                           ),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.accentColor,
+                            backgroundColor: _darkGreenPrimary, // Ganti warna tombol
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
